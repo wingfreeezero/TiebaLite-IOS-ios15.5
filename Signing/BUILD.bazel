@@ -5,4 +5,3 @@
 package(default_visibility = ["//visibility:public"])
 
 filegroup(name = "profile_app", srcs = ["app.mobileprovision"])
-, srcs = ["ext.mobileprovision"])
