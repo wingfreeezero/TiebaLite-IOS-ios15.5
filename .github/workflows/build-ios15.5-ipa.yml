@@ -57,7 +57,7 @@ jobs:
     runs-on: ${{ inputs.runner || 'macos-26' }}
     timeout-minutes: 120
     concurrency:
-      group: ios155-build-${{ github.ref }}
+      group: ios155-build-${{ github.ref }}-${{ inputs.runner || 'macos-26' }}
       # 不互相取消：macOS 运行器排队时常常等不到机器，允许并排多排几个更容易抢到。
       cancel-in-progress: false
     env:
