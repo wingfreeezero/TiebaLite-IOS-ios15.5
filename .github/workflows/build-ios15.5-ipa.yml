@@ -1,16 +1,17 @@
-name: Build iOS Unsigned IPA
+name: Build iOS 15.5 Unsigned IPA
 
-# 一次编译出一个未签名真机 IPA（Artifact + 打 tag 时发布 Release）：
-#   TiebaLite-<版本>.ipa  最低 iOS 17；同一份二进制在 iOS 26+ 上运行时吃满液态玻璃等全部特性
-#                        （26 专属能力全走 #available 分支，17/18 上自动退回该系统年代的材质）。
-# 未签名（ad-hoc 签名）真机 IPA，供 SideStore / AltStore 重签侧载。
+# 一次编译出一个未签名真机 IPA（Artifact + 打 tag 时发 Release）：
+#   TiebaLite-<版本>-ios15.5.ipa   最低 iOS 15.5；本分支已把 iOS 26 的液态玻璃、
+#                                  iOS 17 的 trait 观察/空态视图、iOS 16 的编辑菜单等
+#                                  全部换成 15.5 落法（见 Sources/TiebaNative/Compat/）。
+# 未签名（ad-hoc 签名）真机 IPA，供 SideStore / AltStore / ESign / TrollStore 重签侧载。
 # 纯 Swift + Bazel：无 Node / npm / Metro / CocoaPods，也不需要任何 Apple 账号或 secret。
 #
 # 为什么 ad-hoc 等于"无签名"口径：rules_apple 对设备构建强制要求每个 bundle 都有
 # provisioning_profile 工件（ios_rules.bzl 无条件挂 partial），但把签名身份设为
 # ad-hoc（--ios_signing_cert_name=-）时它明确不拿该描述文件去签名
-# （codesigning_support.bzl:528）。所以 Build 步现场生成一个
-# 结构合法的占位件，产物是 ad-hoc 签名、无团队标识 —— 侧载工具会重签，不影响安装。
+# （codesigning_support.bzl:528）。所以 Build 步现场生成一个结构合法的占位件，
+# 产物是 ad-hoc 签名、无团队标识 —— 侧载工具会重签，不影响安装。
 
 on:
   workflow_dispatch:
@@ -23,7 +24,7 @@ on:
           - Debug
         default: Release
       tag_name:
-        description: '发布到的 tag（如 v2.1.1；留空则只出 Artifact 不发 Release）'
+        description: '发布到的 tag（如 v2.2.0-ios15.5；留空则只出 Artifact 不发 Release）'
         type: string
         required: false
         default: ''
@@ -39,7 +40,7 @@ on:
         default: ''
   push:
     tags:
-      - 'v*'
+      - 'v*-ios15.5'
 
 permissions:
   contents: write
@@ -47,15 +48,11 @@ permissions:
 jobs:
   build:
     name: Build
-    # macOS 26 自带 Xcode 26.x。如需固定版本可加：
-    #   - uses: maxim-lobanov/setup-xcode@v1
-    #     with:
-    #       xcode-version: '26.2.0'
+    # macOS 26 自带 Xcode 26.x（本工程用 SDK 26 编译、只是把部署底线降到 15.5）。
     runs-on: macos-26
     timeout-minutes: 120
-    # 并发键放在 job 级：同一 ref 的构建串行，不会互相取消。
     concurrency:
-      group: ios-build-${{ github.ref }}
+      group: ios155-build-${{ github.ref }}
       cancel-in-progress: true
     env:
       CONFIGURATION: ${{ inputs.configuration || 'Release' }}
@@ -68,22 +65,16 @@ jobs:
           xcodebuild -version
           swift --version
 
-      # Bazel 磁盘/仓库缓存：命中后整包十几秒（冷编约 100 s）。
       - name: Cache Bazel
         uses: actions/cache@v4
         with:
           path: |
             ~/.bazel_cache/disk
             ~/.bazel_cache/repository
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', '.bazelversion', 'BUILD.bazel', '**/BUILD.bazel') }}
+          key: bazel-ios155-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', '.bazelrc', '.bazelversion', 'BUILD.bazel', '**/BUILD.bazel') }}
           restore-keys: |
-            bazel-${{ runner.os }}-
+            bazel-ios155-${{ runner.os }}-
 
-      # ⚠️ 缓存要真的生效，必须让 Bazel 知道去哪读写：之前 actions/cache 只负责存/取
-      # ~/.bazel_cache/{disk,repository}，但仓库里没有任何 --disk_cache / --repository_cache
-      # 设置（.bazelrc 里那两行是"复制到 .bazelrc.user"的模板，而 .bazelrc.user 被 gitignore
-      # ⇒ runner 上根本不存在）—— 缓存步一直在存/取一个空目录。这里在构建前把 .bazelrc.user
-      # 写出来（.bazelrc 用 try-import 引入，缺了也不报错，本地开发机各自维护自己那份）。
       - name: Enable Bazel disk/repository cache
         run: |
           cat > .bazelrc.user <<EOF
@@ -92,12 +83,9 @@ jobs:
           EOF
           cat .bazelrc.user
 
-      # 拆分卡口：//Sources/TiebaNative:Proto 这个 target 依赖那 267 个 protoc 产物是 public
-      # （protoc-gen-swift 默认生成 internal，跨 module 不可见）。若有人用默认可见性重新生成，
-      # 拆分会在编译期挂掉且报错点在生成物里、很难定位 —— 所以在构建前先拦一次，并给出正确姿势。
+      # 拆分卡口：//Sources/TiebaNative:Proto 依赖那 267 个 protoc 产物是 public。
       - name: Verify protoc-generated visibility
         run: |
-          # 没拆 Proto target 的树上跳过：判据只对拆过的树成立。
           if ! grep -q 'name = "Proto"' Sources/TiebaNative/BUILD.bazel; then
             echo "skip: 本分支未拆 //Sources/TiebaNative:Proto，无需校验生成物可见性"
             exit 0
@@ -106,28 +94,24 @@ jobs:
           missing=$(grep -L 'public ' Sources/TiebaNative/Proto/Generated/*.pb.swift | wc -l | tr -d ' ')
           echo "protoc 产物: $total 个，其中不含任何 public 声明的: $missing 个"
           if [ "$missing" != "0" ]; then
-            echo "::error::有 $missing 个 protoc 产物不含 public 声明。拆分（//Sources/TiebaNative:Proto）依赖它们跨 module 可见，请用 protoc-gen-swift --swift_opt=Visibility=Public 重新生成后再提交。"
-            grep -L 'public ' Sources/TiebaNative/Proto/Generated/*.pb.swift | head -5
+            echo "::error::有 $missing 个 protoc 产物不含 public 声明（拆 target 后跨 module 不可见）。"
             exit 1
           fi
+
+      - name: Verify iOS 15.5 floor
+        run: |
+          # 防止有人把底线改回去：本工作流的产物必须真的能装进 15.5。
+          grep -q 'ios_minimum_os=15.5' .bazelrc || { echo "::error::.bazelrc 的 --ios_minimum_os 不是 15.5"; exit 1; }
+          grep -q 'minimum_os_version = "15.5"' BUILD.bazel || { echo "::error::BUILD.bazel 的 minimum_os_version 不是 15.5"; exit 1; }
 
       - name: Build (bazel, ad-hoc signed device IPA)
         run: |
           brew install bazelisk
           bazel --version
-          # ── 占位描述文件（原先的 Tools/make-unsigned-profile.sh，2026-10-07 内联到这里）──
-          # rules_apple 对设备构建强制要求每个 bundle 都有 provisioning_profile 工件
-          # （ios_rules.bzl 无条件挂 partial），且会解析它的 plist 取 entitlements；
-          # 身份设成 ad-hoc（--ios_signing_cert_name=-）时 rules_apple 不拿它签名
-          # （codesigning_support.bzl:528），所以只需要一个结构合法、键齐全的容器。
-          # 自签一张一次性证书只为产出 CMS 结构；不涉及任何 Apple 凭据，产物也不进仓库。
+          # ── 占位描述文件（app 一份；Live Activity 扩展已随 16.1 底线删除）──
           mkdir -p Signing
-          keep=0
-          for out in Signing/app.mobileprovision Signing/ext.mobileprovision; do
-            if [ -f "$out" ] && [ "$(wc -c < "$out" | tr -d ' ')" -gt 4096 ]; then keep=1; fi
-          done
-          if [ "$keep" = "1" ]; then
-            echo "keep existing provisioning profiles (look real)"
+          if [ -f Signing/app.mobileprovision ] && [ "$(wc -c < Signing/app.mobileprovision | tr -d ' ')" -gt 4096 ]; then
+            echo "keep existing provisioning profile (looks real)"
           else
             tmp="$(mktemp -d)"
             trap 'rm -rf "$tmp"' EXIT
@@ -151,46 +135,47 @@ jobs:
           PLIST
             openssl req -x509 -newkey rsa:2048 -nodes -keyout "$tmp/key.pem" -out "$tmp/cert.pem" \
               -days 3650 -subj "/CN=BuildPlaceholder" 2>/dev/null
-            for out in Signing/app.mobileprovision Signing/ext.mobileprovision; do
-              openssl smime -sign -in "$tmp/profile.plist" -signer "$tmp/cert.pem" -inkey "$tmp/key.pem" \
-                -nodetach -outform der -out "$out" 2>/dev/null
-              echo "wrote $out ($(wc -c < "$out" | tr -d ' ') bytes)"
-            done
+            openssl smime -sign -in "$tmp/profile.plist" -signer "$tmp/cert.pem" -inkey "$tmp/key.pem" \
+              -nodetach -outform der -out Signing/app.mobileprovision 2>/dev/null
+            echo "wrote Signing/app.mobileprovision ($(wc -c < Signing/app.mobileprovision | tr -d ' ') bytes)"
           fi
           mode=$([ "$CONFIGURATION" = "Release" ] && echo release || echo debug)
-          # //:AppStripped = //:App 的 IPA 再剥一遍符号表（体积约 -12%，见 BUILD.bazel 该目标的注释）；
-          # dSYM 由 //:App 生成，剥离不改 UUID，崩溃符号化不受影响。
           bazel build //:AppStripped --config=ci --config="$mode"
 
       - name: Package IPA
         run: |
-          # 文件名：填了 tag 就用 tag 作版本号（v2.1.1 → TiebaLite-v2.1.1.ipa），没填按 commit 命名。
           tag="${{ inputs.tag_name || github.ref_name }}"
           case "$tag" in
             v*) base="TiebaLite-$tag" ;;
-            *)  base="TiebaLite-unsigned-$(echo "${GITHUB_SHA}" | cut -c1-7)" ;;
+            *)  base="TiebaLite-ios15.5-$(echo "${GITHUB_SHA}" | cut -c1-7)" ;;
+          esac
+          case "$base" in
+            *ios15.5*) ;;
+            *) base="${base}-ios15.5" ;;
           esac
           echo "IPA_NAME=${base}.ipa" >> "$GITHUB_ENV"
           mkdir -p build/Payload
           unzip -q bazel-bin/AppStripped.ipa -d build
-          # 原先这里有一道 python 隐私消毒（等长替换产物内嵌的构建机绝对路径，RN/Hermes
-          # 时代留下：Hermes 字节码不受编译期 -ffile-prefix-map 约束）。2026-10-07 实测
-          # CI 产物与本地未消毒产物里 /Users/... 与 bazel 临时路径均为 **0 处**，Hermes 早已
-          # 不存在 ⇒ 这一步（及其脚本）删除；产物自检仍在下一步做最低系统版本核对。
           ( cd build && zip -qry "$(basename "${base}.ipa")" Payload )
           unzip -l "build/${base}.ipa" | head -20
-          # 产物自检：APP 的最低系统版本必须是 17.0（合一后只有一种 IPA）
-          /usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" build/Payload/*.app/Info.plist
+          # 产物自检：最低系统版本必须是 15.5（不是 17.0 / 26.0），且不应带 Live Activity 扩展。
+          got=$(/usr/libexec/PlistBuddy -c "Print :MinimumOSVersion" build/Payload/*.app/Info.plist)
+          echo "MinimumOSVersion = $got"
+          [ "$got" = "15.5" ] || { echo "::error::产物的 MinimumOSVersion 是 $got，不是 15.5"; exit 1; }
+          if [ -d build/Payload/*.app/PlugIns ]; then
+            echo "::error::产物里仍有 PlugIns（扩展最低 16.1，会让 15.5 装不上）"
+            ls -R build/Payload/*.app/PlugIns
+            exit 1
+          fi
+          echo "OK: 15.5 底线产物校验通过"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ipa
+          name: ipa-ios15.5
           path: build/${{ env.IPA_NAME }}
           if-no-files-found: error
 
-  # 构建产物出来后发 Release，挂上那一个 IPA。
-  # 只在"手动触发且填了 tag_name"或"push 了 v* tag"时执行。
   release:
     needs: build
     if: >-
@@ -209,7 +194,7 @@ jobs:
         with:
           tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name }}
           name: ${{ (github.event_name == 'workflow_dispatch' && inputs.release_title != '') && inputs.release_title || (github.event_name == 'workflow_dispatch' && inputs.tag_name || github.ref_name) }}
-          body: ${{ github.event_name == 'workflow_dispatch' && inputs.release_notes || '' }}
+          body: ${{ github.event_name == 'workflow_dispatch' && inputs.release_notes || 'iOS 15.5 底线构建（未签名，供 SideStore / AltStore 重签侧载）' }}
           generate_release_notes: ${{ github.event_name != 'workflow_dispatch' }}
           files: dist/*.ipa
           fail_on_unmatched_files: true

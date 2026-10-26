@@ -15,13 +15,12 @@ ios_application(
     bundle_id = "com.tiebalite.app",
     bundle_name = "tiebalite",
     entitlements = "//TiebaLite:tiebalite.entitlements",
-    extensions = ["//Extensions/TiebaLiveActivity:extension"],
     families = [
         "iphone",
         "ipad",
     ],
     infoplists = ["//TiebaLite:app_info_plist"],
-    minimum_os_version = "17.0",
+    minimum_os_version = "15.5",
     # Unset unless --config=device (or --define=apple.device_signing=1) is passed.
     provisioning_profile = select({
         "//TiebaLite:device_signing": "//Signing:profile_app",

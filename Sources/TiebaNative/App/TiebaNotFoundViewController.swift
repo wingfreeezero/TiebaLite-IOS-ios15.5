@@ -6,13 +6,13 @@ import UIKit
 /// 页面本体就是这个类——过渡期由 TiebaRouteHostViewController 套一层壳，
 /// 终局那层壳删掉时它一行都不用改。
 ///
-/// 排版用系统的 `UIContentUnavailableConfiguration`（iOS 17+）而不是自绘竖排
+/// 排版用系统的 `TiebaUnavailableConfiguration`（iOS 17+）而不是自绘竖排
 /// 堆栈：旧页面是 SwiftUI 的 `ContentUnavailableView`，两者是同一套系统排版
 /// （图标尺寸、字号、次级文字颜色、行距全由系统决定），自绘必然漂移。
 public final class TiebaNotFoundViewController: UIViewController, TiebaNativeScreen {
   public override func viewDidLoad() {
     super.viewDidLoad()
-    var config = UIContentUnavailableConfiguration.empty()
+    var config = TiebaUnavailableConfiguration.empty()
     config.image = UIImage(systemName: "questionmark.folder")
     config.text = "页面不存在"
     config.secondaryText = "你访问的链接可能已失效或不存在"
@@ -20,7 +20,7 @@ public final class TiebaNotFoundViewController: UIViewController, TiebaNativeScr
     // 旧页面是 SwiftUI `.glassProminent` + `.capsule`，UIKit 对应 iOS 26 的
     // Configuration.prominentGlass()（17 上退回经典 filled）。刻意不设 tintColor：
     // 资源目录无 AccentColor，旧页面 accent 就是系统默认蓝，设成应用主色反而会变。
-    var button: UIButton.Configuration = if #available(iOS 26.0, *) { .prominentGlass() } else { .filled() }
+    var button: UIButton.Configuration = .filled()
     button.title = "返回首页"
     button.image = UIImage(systemName: "house")
     button.imagePadding = 6
@@ -33,6 +33,17 @@ public final class TiebaNotFoundViewController: UIViewController, TiebaNativeScr
       // 随即被 pop。（与旧页面 router.selectTab(0) 走的是同一条原生入口。）
       TiebaNavigator.shared.selectTab(0)
     }
-    contentUnavailableConfiguration = config
+    // 系统的 `contentUnavailableConfiguration`（UIViewController，iOS 17 起）在本分支换成
+    // 自建空态视图：同一份配置、同一套系统排版语义（图标 48 / 标题 headline / 说明次级色），
+    // 铺满页面即可（本页没有列表需要与它争高度）。
+    let unavailable = TiebaUnavailableView(configuration: config)
+    unavailable.translatesAutoresizingMaskIntoConstraints = false
+    view.addSubview(unavailable)
+    NSLayoutConstraint.activate([
+      unavailable.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+      unavailable.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+      unavailable.topAnchor.constraint(equalTo: view.topAnchor),
+      unavailable.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+    ])
   }
 }

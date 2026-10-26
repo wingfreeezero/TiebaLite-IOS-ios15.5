@@ -12,7 +12,7 @@ final class TiebaUserProfileViewController: UIViewController, TiebaNativeScreen 
 
   private let uid: String
   private let list = TiebaKindListContentView()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   /// 首屏资料骨架（原 user/[uid].tsx SkeletonList variant="row" count={8}）
   private let skeletonView = TiebaSkeletonList(variant: .row, count: 8)
   private let pill = TiebaPhotoBrowserPillView()
@@ -402,7 +402,7 @@ final class TiebaUserProfileViewController: UIViewController, TiebaNativeScreen 
     switch state {
     case .loading:
       // 首次加载且无资料：骨架（原 loadingProfile && !user 分支）
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
       stateView.isHidden = true
       skeletonView.isHidden = false
     case .error(let message):

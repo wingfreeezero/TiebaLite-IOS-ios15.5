@@ -164,7 +164,7 @@ public enum TiebaPhotoBrowser {
     // assumeIsolated 把"startSession 只在主线程执行"的既有契约显式化（调用方
     // 要么已在主线程、要么经 DispatchQueue.main 派发）；捕获的 items/transition
     // 都是 Sendable 值类型，host 在闭包内取，不产生跨域发送。
-    return MainActor.assumeIsolated {
+    return MainActor.tiebaAssumeIsolated {
       guard let host = TiebaTopViewController.find() else { return false }
       let session = TiebaPhotoBrowserSession(
         items: items,

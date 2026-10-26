@@ -70,7 +70,7 @@ extension TiebaRootNavigationController: UIGestureRecognizerDelegate {
 public final class TiebaMainTabBarController: UITabBarController {
   /// 已选中 tab 被再次点击时回调（原生直接受理 tabReselected）。
   /// 标 @MainActor：回调体要访问宿主/页面的 @MainActor 状态（TiebaNavigator.install 里那段），
-  /// 声明成主 actor 闭包后调用方无需 MainActor.assumeIsolated。
+  /// 声明成主 actor 闭包后调用方无需 MainActor.tiebaAssumeIsolated。
   var onReselect: (@MainActor (Int) -> Void)?
 
   private var theme: TiebaChromeTheme = .default
@@ -84,7 +84,7 @@ public final class TiebaMainTabBarController: UITabBarController {
     delegate = self
     applyTheme(theme)
     // 分屏 / Slide Over 改宽度不会走 viewWillTransition，尺寸类别要单独观察。
-    registerForTraitChanges([UITraitHorizontalSizeClass.self]) { (self: Self, _: UITraitCollection) in
+    tiebaObserveTraits(self, [.horizontalSizeClass]) { (self: Self) in
       self.configureSidebar()
     }
     // 底栏不发按压手势：底栏项的视图层级不是公开的 UIControl 保证（栏内 hitTest
@@ -145,13 +145,7 @@ public final class TiebaMainTabBarController: UITabBarController {
     // "content is aligned to the bottom"（底部对齐、只能往回翻的内容），正是本 App 的反面。
     // f19f33e 曾按"枚举名 = 手指方向"改成 .onScrollUp 读反了，2026-10-08 用户复报后改回。
     //
-    // 可用性：滚动收纳（tabBarMinimizeBehavior）是 iOS 26 的能力；17/18 上该开关不生效
-    // （底栏常驻）。降级：不写这个属性，底栏一直显示。
-    if #available(iOS 26.0, *) {
-      tabBarMinimizeBehavior = regular
-        ? .automatic
-        : (tabBarMinimizeEnabled ? .onScrollDown : .never)
-    }
+    // 滚动收纳（tabBarMinimizeBehavior）是 iOS 26 的能力，本分支整段删除：15.5 上底栏常驻。
     guard regular else { return }
     // 只落一次默认展开。之后 sidebar.isHidden 归用户（系统折叠按钮）与
     // TiebaNavigator 的进二级页收起管——这里再写会把用户的折叠顶回去。
@@ -172,23 +166,16 @@ public final class TiebaMainTabBarController: UITabBarController {
   ) {
     super.viewWillTransition(to: size, with: coordinator)
     // coordinator 的 completion 本来就在主 actor 上回调，直接调即可
-    // （原来套了一层 MainActor.assumeIsolated，属多余的绕过标注）。
+    // （原来套了一层 MainActor.tiebaAssumeIsolated，属多余的绕过标注）。
     coordinator.animate { _ in } completion: { [weak self] _ in
       self?.configureSidebar()
     }
   }
 
   /// 底栏滚动收纳开关（设置→使用习惯→浏览，默认开）。
-  var tabBarMinimizeEnabled: Bool = true {
-    didSet {
-      guard oldValue != tabBarMinimizeEnabled else { return }
-      guard traitCollection.horizontalSizeClass != .regular else { return }
-      // 降级：滚动收纳是 iOS 26 的能力，17/18 上不写这个属性（底栏常驻）。
-      guard #available(iOS 26.0, *) else { return }
-      // 方向同 configureSidebar：手指上滑收纳、下滑恢复（见那里的注释）。
-      tabBarMinimizeBehavior = tabBarMinimizeEnabled ? .onScrollDown : .never
-    }
-  }
+  /// 15.5 上没有滚动收纳（iOS 26 起的能力，实现已删）：属性保留是为了让设置项仍在、
+  /// 偏好也照常落盘，写入无副作用（底栏常驻）。
+  var tabBarMinimizeEnabled: Bool = true
 }
 
 extension TiebaMainTabBarController: UITabBarControllerDelegate {

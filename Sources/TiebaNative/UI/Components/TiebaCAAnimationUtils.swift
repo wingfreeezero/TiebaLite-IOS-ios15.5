@@ -24,24 +24,8 @@ private func tiebaAnimationDurationFactor() -> Double {
     return 1.0
 }
 
-private func tiebaMake26SpringAnimation(_ keyPath: String, _ duration: Double) -> CABasicAnimation {
-    let springAnimation = CASpringAnimation(keyPath: keyPath)
-    // iOS 26 系统弹簧（ζ = 1.000 临界阻尼）：值出 TiebaMotionSpec.Spring，见该表 ios26Mass 注释。
-    springAnimation.mass = TiebaMotionSpec.Spring.ios26Mass
-    springAnimation.stiffness = TiebaMotionSpec.Spring.ios26Stiffness
-    springAnimation.damping = TiebaMotionSpec.Spring.ios26Damping
-    springAnimation.duration = duration
-    springAnimation.timingFunction = CAMediaTimingFunction(name: .linear)
-    if #available(iOS 17.0, *) {
-        springAnimation.allowsOverdamping = false
-    }
-    return springAnimation
-}
-
 private func tiebaMakeSpringAnimation(_ keyPath: String, duration: Double) -> CABasicAnimation {
-    if #available(iOS 26.0, *) {
-        return tiebaMake26SpringAnimation(keyPath, duration)
-    }
+    // iOS 26 系统弹簧（tiebaMake26SpringAnimation）已随版本分支删除：15.5 上走下面的经典弹簧参数。
     let springAnimation = CASpringAnimation(keyPath: keyPath)
     springAnimation.mass = 3.0
     springAnimation.stiffness = 1000.0
@@ -171,36 +155,9 @@ public extension CALayer {
             
             return animation
         } else if timingFunction == tiebaCAMediaTimingFunctionSpring {
-            // 0.3832 = 系统签名时长（上游三处互证，见 TiebaMotionSpec.Spring.signatureDuration）：
-            // 请求时长落在这个数上 → 说明发起方就是在跟系统动画同拍，改用 iOS 26 弹簧而不是贝塞尔回退。
-            if #available(iOS 26.0, *), abs(duration - TiebaMotionSpec.Spring.signatureDuration) <= 0.0001 {
-                let animation = tiebaMake26SpringAnimation(keyPath, duration)
-                animation.fromValue = from
-                animation.toValue = to
-                animation.isRemovedOnCompletion = removeOnCompletion
-                animation.fillMode = .forwards
-                if let completion {
-                    animation.delegate = CALayerAnimationDelegate(animation: animation, completion: completion)
-                }
-                
-                let k = Float(tiebaAnimationDurationFactor())
-                var speed: Float = 1.0
-                if k != 0 && k != 1 {
-                    speed = Float(1.0) / k
-                }
-                
-                animation.speed = speed * Float(animation.duration / duration)
-                animation.isAdditive = additive
-                
-                if !delay.isZero {
-                    animation.beginTime = self.convertTime(CACurrentMediaTime(), from: nil) + delay * tiebaAnimationDurationFactor()
-                    animation.fillMode = .both
-                }
-                
-                adjustFrameRate(animation: animation, layer: self)
-                
-                return animation
-            } else if duration == 0.5 {
+            // iOS 26 的「签名时长 → 26 弹簧」分支已删（15.5 上没有这套弹簧语义）：
+            // 请求时长在这里一律按下面的经典弹簧 / 贝塞尔回退处理。
+            if duration == 0.5 {
                 let animation = tiebaMakeSpringAnimation(keyPath, duration: duration)
                 animation.fromValue = from
                 animation.toValue = to

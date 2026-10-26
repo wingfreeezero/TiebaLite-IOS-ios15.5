@@ -186,7 +186,7 @@ extension HeroTransition {
         // 在主线程调用），assumeIsolated 把这条既有契约显式告诉编译器；本仓同款手法
         // 见 TiebaChrome 的 didMoveToWindow 钩子。
         DispatchQueue.main.async {
-          MainActor.assumeIsolated {
+          MainActor.tiebaAssumeIsolated {
             self.animate()
           }
         }

@@ -6,7 +6,7 @@ import UIKit
 final class TiebaUserSocialViewController: UIViewController {
   private let uid: String
   private let list = TiebaKindListContentView()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   private let segmented = UISegmentedControl(items: ["粉丝", "关注"])
 
   private var fans: Bool
@@ -198,7 +198,7 @@ final class TiebaUserSocialViewController: UIViewController {
   private func showState(_ state: State) {
     switch state {
     case .loading:
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
       stateView.isHidden = false
     case .error(let message):
       stateView.showError(message) { [weak self] in self?.reload(reset: true) }

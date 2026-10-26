@@ -1,6 +1,6 @@
 // TiebaLite — 空/错状态与页内小件的共享实现
 //
-// 收敛本域此前逐字近似的多份实现：错误态 UIContentUnavailableConfiguration
+// 收敛本域此前逐字近似的多份实现：错误态 TiebaUnavailableConfiguration
 //（三角 + 重试）8 份、TiebaStateContentView 三态 switch 2 份、空态占位行 4 份、
 // 列表色板染色 7 份、统计列 3 份、头像+标题+按钮行 2 份。
 //
@@ -8,7 +8,7 @@
 
 import UIKit
 
-// MARK: - 系统空/错状态（UIContentUnavailableConfiguration）
+// MARK: - 系统空/错状态（TiebaUnavailableConfiguration）
 
 @MainActor
 enum TiebaContentUnavailable {
@@ -16,8 +16,8 @@ enum TiebaContentUnavailable {
   static func error(
     _ message: String,
     onRetry: @escaping () -> Void
-  ) -> UIContentUnavailableConfiguration {
-    var config = UIContentUnavailableConfiguration.empty()
+  ) -> TiebaUnavailableConfiguration {
+    var config = TiebaUnavailableConfiguration.empty()
     config.image = UIImage(systemName: "exclamationmark.triangle")
     config.text = "加载失败"
     config.secondaryText = message
@@ -40,8 +40,8 @@ enum TiebaContentUnavailable {
     buttonTitle: String? = nil,
     buttonImage: String? = nil,
     onButton: (() -> Void)? = nil
-  ) -> UIContentUnavailableConfiguration {
-    var config = UIContentUnavailableConfiguration.empty()
+  ) -> TiebaUnavailableConfiguration {
+    var config = TiebaUnavailableConfiguration.empty()
     config.image = UIImage(systemName: image)
     config.text = text
     config.secondaryText = secondaryText
@@ -61,7 +61,7 @@ enum TiebaContentUnavailable {
   }
 }
 
-extension UIContentUnavailableView {
+extension TiebaUnavailableView {
   /// 挂错误态（三角 + 重试）并显示自身。
   func showError(_ message: String, onRetry: @escaping () -> Void) {
     configuration = TiebaContentUnavailable.error(message, onRetry: onRetry)

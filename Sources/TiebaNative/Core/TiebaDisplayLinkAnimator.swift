@@ -5,7 +5,7 @@
 // 本仓改动：业务逻辑与代码结构零改动。仅做 Swift 6 并发标注（上游为 Swift 5 代码）：
 //       1) 两处 NotificationCenter 观察者回调改用「init 里同步注册 + Task { @MainActor } 接管
 //          回调体」的结构化并发写法（block 是 @Sendable nonisolated 闭包，驱动状态受 MainActor 隔离）
-//          —— 原为 MainActor.assumeIsolated 断言；
+//          —— 原为 MainActor.tiebaAssumeIsolated 断言；
 //       2) TiebaDisplayLinkAnimator.deinit / TiebaConstantDisplayLinkAnimator.deinit 改用 Swift 6.2 的
 //          isolated deinit（deinit 为 nonisolated，Link 成员受 MainActor 隔离）。
 //       均以 // [移植] 注释就地标注。
@@ -140,7 +140,7 @@ private let isIpad: Bool = {
     }
 
     /// [移植] Swift 6 正统化：NotificationCenter 的 block 是 @Sendable 的 nonisolated 闭包，
-    /// 上游在闭包里用 MainActor.assumeIsolated 断言「此刻就在主 actor 上」（绕过隔离检查）。
+    /// 上游在闭包里用 MainActor.tiebaAssumeIsolated 断言「此刻就在主 actor 上」（绕过隔离检查）。
     /// 这里改为正统的结构化并发：注册在 init 返回后同步完成（不漏通知），回调体交给
     /// Task { @MainActor } 在主 actor 上执行，不需要任何断言。
     /// 语义差异：回调体由「投递线程同步执行」变为「下一个主 actor 回合执行」，晚一拍（亚毫秒级）；

@@ -40,7 +40,7 @@ final class TiebaAboutViewController: UIViewController {
   private static let appearanceKeys = ["lightTheme", "darkTheme", "customPrimaryColor"]
   /// 观察者/外观登记都是 non-Sendable，deinit 非隔离：与 TiebaHomeViewController 同款声明。
   private nonisolated(unsafe) var prefToken: NSObjectProtocol?
-  private var styleRegistration: UITraitChangeRegistration?
+  private var styleRegistration: TiebaTraitRegistration?
 
   deinit {
     if let prefToken { NotificationCenter.default.removeObserver(prefToken) }
@@ -65,8 +65,8 @@ final class TiebaAboutViewController: UIViewController {
     }
     // 跟随系统时深浅由本页显式下发（form.isDark 会锁死表单自身 trait），
     // 系统切档后不重算会停在上一档（导航壳只重刷自己）。
-    styleRegistration = registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
-      (controller: TiebaAboutViewController, _) in
+    styleRegistration = tiebaObserveTraits(self, [.userInterfaceStyle]) {
+      (controller: TiebaAboutViewController) in
       controller.refreshAppearance()
     }
   }

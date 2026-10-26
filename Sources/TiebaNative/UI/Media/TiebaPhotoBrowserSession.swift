@@ -531,7 +531,7 @@ final class TiebaPhotoBrowserSession: NSObject, @preconcurrency JXPhotoBrowserDe
     // 内部切主（见文件头）、JXPhotoBrowser delegate / 手势回调都在主线程。
     // 与 ActionController.pill（:685）同一依据：assumeIsolated 只是把这条既有
     // 契约显式化，同步执行，没有真正的跨域。
-    MainActor.assumeIsolated {
+    MainActor.tiebaAssumeIsolated {
       // 与顶栏同一条动作：顶栏走可中断转场，页码点也要从当前状态续跑——否则连点时
       // 每次从 0/1 重头来（用户口径「连点顿挫」）。
       TiebaAnimation.animate(duration: 0.2, options: [.beginFromCurrentState]) {
@@ -550,7 +550,7 @@ final class TiebaPhotoBrowserSession: NSObject, @preconcurrency JXPhotoBrowserDe
       chromeAutoHideWorkItem?.cancel()
       chromeAutoHideWorkItem = nil
       chrome?.setVisible(false, animated: true)
-      MainActor.assumeIsolated {
+      MainActor.tiebaAssumeIsolated {
         // [按上游归位] 0.15 → TiebaAnimationDuration.fastFade（上游 0.15 档，值逐字不变）。
         // 语义正好对得上："手指开始拖动 → 页码点让位"，就是上游那档"手指离开后的余韵"。
         TiebaAnimation.animate(duration: TiebaAnimationDuration.fastFade) {
@@ -561,7 +561,7 @@ final class TiebaPhotoBrowserSession: NSObject, @preconcurrency JXPhotoBrowserDe
     }
     // 回弹（未达关闭阈值）：恢复用户设定的显隐态，并按旧查看器 2.6s 后自动收起。
     chrome?.setVisible(chromeVisible, animated: true)
-    MainActor.assumeIsolated {
+    MainActor.tiebaAssumeIsolated {
       TiebaAnimation.animate(duration: 0.2) {
         self.indicator?.alpha = self.chromeVisible ? 1 : 0
       }

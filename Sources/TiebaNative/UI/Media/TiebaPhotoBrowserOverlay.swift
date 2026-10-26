@@ -152,7 +152,7 @@ final class TiebaPhotoBrowserChromeOverlay: UIView, JXPhotoBrowserOverlay {
     // 系统液态玻璃圆钮；17 退回经典 gray（白前景/胶囊/尺寸逐值不变）。
     // 降级：.glass() 是 iOS 26 起。
     var config: UIButton.Configuration =
-      if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      .gray()
     config.image = image
     config.baseForegroundColor = .white
     config.cornerStyle = .capsule

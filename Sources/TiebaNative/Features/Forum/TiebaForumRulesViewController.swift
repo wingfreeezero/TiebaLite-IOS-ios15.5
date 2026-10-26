@@ -13,7 +13,7 @@ final class TiebaForumRulesViewController: UIViewController, TiebaNativeScreen {
 
   private let table = UITableView(frame: .zero, style: .insetGrouped)
   private let refreshControl = UIRefreshControl()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   private var rules: TiebaForumRules?
   private var isLoading = false
 
@@ -188,7 +188,7 @@ final class TiebaForumRulesViewController: UIViewController, TiebaNativeScreen {
       stateView.isHidden = true
       table.isHidden = false
     case .loading:
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
       stateView.isHidden = false
       table.isHidden = true
     case .empty:

@@ -10,14 +10,14 @@
 import UIKit
 
 class TiebaPostListPageController: UIViewController {
-  private var contentSizeRegistration: UITraitChangeRegistration?
+  private var contentSizeRegistration: TiebaTraitRegistration?
 
   override func viewDidLoad() {
     super.viewDidLoad()
     // iOS Settings 里改字号的实时回归：只重排当前行模型/量高，不重建数据源。
-    contentSizeRegistration = registerForTraitChanges([
-      UITraitPreferredContentSizeCategory.self,
-    ]) { (self: TiebaPostListPageController, _: UITraitCollection) in
+    contentSizeRegistration = tiebaObserveTraits(self, [
+      .preferredContentSizeCategory,
+    ]) { (self: TiebaPostListPageController) in
       TiebaTypography.invalidateForSystemContentSizeCategoryChange()
       self.discardReuseMemoForAppearance()
       self.publish(fresh: true)
@@ -27,7 +27,7 @@ class TiebaPostListPageController: UIViewController {
   // MARK: - 共享子视图
 
   let list = TiebaKindListContentView()
-  let stateView = UIContentUnavailableView(configuration: .loading())
+  let stateView = TiebaUnavailableView(configuration: .loading())
   let pill = TiebaPhotoBrowserPillView()
   /// 首屏骨架（形状/数量各页不同；首次访问时按子类覆写值创建）。
   private(set) lazy var skeletonView = TiebaSkeletonList(variant: skeletonVariant, count: skeletonCount)
@@ -345,15 +345,15 @@ class TiebaPostListPageController: UIViewController {
     case .loading:
       // 首次加载且无行：骨架（原 loading && rows.length === 0 分支）
       showsLoadingSkeleton = true
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
     case .empty:
-      var config = UIContentUnavailableConfiguration.empty()
+      var config = TiebaUnavailableConfiguration.empty()
       config.image = UIImage(systemName: "bubble.left")
       config.text = "暂无回复"
       config.secondaryText = emptySecondaryText
       stateView.configuration = config
     case .error(let message):
-      var config = UIContentUnavailableConfiguration.empty()
+      var config = TiebaUnavailableConfiguration.empty()
       config.image = UIImage(systemName: "exclamationmark.triangle")
       config.text = "加载失败"
       config.secondaryText = message

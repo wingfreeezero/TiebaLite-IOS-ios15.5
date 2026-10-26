@@ -301,7 +301,7 @@ enum TiebaChrome {
         // swizzle 实现）。用 assumeIsolated 而不是派主队列——外观必须在返回前
         // 同步写入，否则"首帧即深色"失效（先白后黑回归）；若哪天真被后台触达，
         // 会立刻 trap 而不是带病写栏状态（响亮失败优于隐性竞争）。
-        MainActor.assumeIsolated {
+        MainActor.tiebaAssumeIsolated {
           // 栏入窗即写一次"两态外观"（见 applyBarAppearance），另外装两个手势：
           // 双击回顶、栏内按压触觉。
           TiebaChrome.ensureBarAppearance(for: navBar)
@@ -340,7 +340,7 @@ enum TiebaChrome {
         // didMoveToWindow 同步写 trait/外观/手势独立保证，不依赖本钩子。
         // 下面的调用都是 @MainActor 状态，而本块是非隔离的 ObjC block：上面已确认
         // 在主线程，这里 assumeIsolated 把这条既有契约显式告诉编译器。
-        MainActor.assumeIsolated {
+        MainActor.tiebaAssumeIsolated {
           guard TiebaChrome.noteBarLayoutIfStructuralChange(navBar) else { return }
           TiebaChrome.markChromeDirty()
           TiebaChrome.scheduleChromeTick()
@@ -369,7 +369,7 @@ enum TiebaChrome {
         // 报 "main actor-isolated default value in a nonisolated context"）。
         // 必须 assumeIsolated：didMoveToWindow 由 UIKit 在主线程调用是本块的契约；
         // 不派主队列，是因为"页面级滚动视图"的判定要落在挂载当拍。
-        MainActor.assumeIsolated {
+        MainActor.tiebaAssumeIsolated {
           // 卸载（superview 已 nil）不标脏：移除不会让任何既有配置失效。
           guard scroll.superview != nil, scroll.isScrollEnabled, !scroll.isHidden,
             scroll.alpha > 0.01
@@ -517,12 +517,9 @@ enum TiebaChrome {
   /// iOS 26 才有 UIScrollEdgeEffect；17 上根本没有这层模糊，直接返回 false（什么都没改）。
   @discardableResult
   private static func hideEdgeEffect(_ scroll: UIScrollView) -> Bool {
-    if #available(iOS 26.0, *) {
-      let effect = scroll.bottomEdgeEffect
-      guard !effect.isHidden else { return false }
-      effect.isHidden = true
-      return true
-    }
+    // UIScrollEdgeEffect（滚动边缘模糊）是 iOS 26 起的系统层；15.5 上根本没有这层，
+    // 也就没有要关的东西 —— 直接返回 false（调用方把它当"这一轮没改动"）。
+    _ = scroll
     return false
   }
 

@@ -95,7 +95,7 @@ enum TiebaAudioSession {
       // Notification 非 Sendable：先取出 Sendable 的原始值再进主 actor 区域。
       let rawType = note.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt
       let rawOptions = note.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt ?? 0
-      MainActor.assumeIsolated {
+      MainActor.tiebaAssumeIsolated {
         guard let rawType,
               let type = AVAudioSession.InterruptionType(rawValue: rawType) else { return }
         switch type {
@@ -122,7 +122,7 @@ enum TiebaAudioSession {
       queue: .main
     ) { note in
       let rawReason = note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? UInt
-      MainActor.assumeIsolated {
+      MainActor.tiebaAssumeIsolated {
         guard let rawReason,
               AVAudioSession.RouteChangeReason(rawValue: rawReason) == .oldDeviceUnavailable else {
           return

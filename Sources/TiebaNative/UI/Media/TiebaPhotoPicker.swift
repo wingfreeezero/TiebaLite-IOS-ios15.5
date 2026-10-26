@@ -97,7 +97,7 @@ final class TiebaPhotoPickerDelegate: NSObject, PHPickerViewControllerDelegate, 
 enum TiebaPhotoPicker {
   /// 展示中的 delegate（强持有，见 TiebaPhotoPickerDelegate 注释）。
   /// 改前症状：本枚举用「模拟主线程契约」——静态状态挂 nonisolated(unsafe)、两条早退路径包
-  /// MainActor.assumeIsolated，而真正触碰 UIKit 的 host.present 反而没有保护（一半陷阱一半裸奔）。
+  /// MainActor.tiebaAssumeIsolated，而真正触碰 UIKit 的 host.present 反而没有保护（一半陷阱一半裸奔）。
   /// 改后行为：整个枚举 @MainActor 收口 —— 静态状态天然隔离、present 只能在主线程调用；
   /// 唯一 nonisolated 的是 outputURL()（解码回调在任意队列，纯路径拼接不碰 UI 状态）。
   private static var activeDelegate: TiebaPhotoPickerDelegate?

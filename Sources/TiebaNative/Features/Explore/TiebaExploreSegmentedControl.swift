@@ -45,7 +45,7 @@ final class TiebaExploreSegmentedControl: UIControl, UIGestureRecognizerDelegate
   private var panPreviewIndex = 0
   private var isChromeCompact = false
   private var visualFrame: CGRect = .zero
-  private var traitRegistration: UITraitChangeRegistration?
+  private var traitRegistration: TiebaTraitRegistration?
 
   init(titles: [String]) {
     if titles.isEmpty { fatalError("分段控件至少需要一个 segment") }
@@ -62,10 +62,10 @@ final class TiebaExploreSegmentedControl: UIControl, UIGestureRecognizerDelegate
     setupButtons()
     setupPanGesture()
     updateButtonStates()
-    traitRegistration = registerForTraitChanges([
-      UITraitPreferredContentSizeCategory.self,
-      UITraitAccessibilityContrast.self,
-    ]) { (control: TiebaExploreSegmentedControl, _: UITraitCollection) in
+    traitRegistration = tiebaObserveTraits(self, [
+      .preferredContentSizeCategory,
+      .accessibilityContrast,
+    ]) { (control: TiebaExploreSegmentedControl) in
       control.updateButtonFonts()
       control.updateButtonStates()
       control.invalidateIntrinsicContentSize()

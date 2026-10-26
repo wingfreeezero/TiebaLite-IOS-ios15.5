@@ -28,7 +28,7 @@ final class TiebaSubpostsViewController: TiebaPostListPageController, TiebaNativ
   private let parentSurface = UIView()
   private let parentRow = TiebaPostRowView()
   private let emptySurface = UIView()
-  private let conversationEmptyView = UIContentUnavailableView(configuration: .empty())
+  private let conversationEmptyView = TiebaUnavailableView(configuration: .empty())
   private var parentModel: TiebaPostRowModel?
   private var parentHeightConstraint: NSLayoutConstraint?
   private var parentLeadingConstraint: NSLayoutConstraint?
@@ -142,7 +142,7 @@ final class TiebaSubpostsViewController: TiebaPostListPageController, TiebaNativ
     emptySurface.isHidden = true
     view.addSubview(emptySurface)
 
-    var empty = UIContentUnavailableConfiguration.empty()
+    var empty = TiebaUnavailableConfiguration.empty()
     empty.image = UIImage(systemName: "bubble.left.and.bubble.right")
     empty.text = "还没有楼中楼"
     empty.secondaryText = "成为第一个加入这场对话的人"

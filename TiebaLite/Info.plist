@@ -47,7 +47,7 @@
 		<string>com.baidu.tieba</string>
 	</array>
 	<key>LSMinimumSystemVersion</key>
-	<string>17.0</string>
+	<string>15.5</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSAppTransportSecurity</key>
@@ -122,10 +122,8 @@
 	<string>TiebaLite 需要保存图片到相册。</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow $(PRODUCT_NAME) to access your photos</string>
-	<key>NSSupportsLiveActivities</key>
-	<true/>
-	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
-	<true/>
+	<!-- Live Activity（ActivityKit）最低 iOS 16.1；本包底线 15.5，声明与 appex 一并移除，
+	     否则安装器会在 15.x 上拒绝整包。 -->
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

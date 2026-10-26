@@ -38,7 +38,7 @@ final class TiebaThemeSettingsViewController: TiebaFormPageController {
   /// 观察者是 non-Sendable，deinit 非隔离：与 TiebaHomeViewController 同款声明。
   private nonisolated(unsafe) var prefToken: NSObjectProtocol?
   /// 外观档变化登记（registerForTraitChanges；traitCollectionDidChange 已废弃）。
-  private var styleRegistration: UITraitChangeRegistration?
+  private var styleRegistration: TiebaTraitRegistration?
 
   deinit {
     if let prefToken { NotificationCenter.default.removeObserver(prefToken) }
@@ -65,8 +65,8 @@ final class TiebaThemeSettingsViewController: TiebaFormPageController {
       return TiebaSimpleText.scaledFont(size: CGFloat(value), weight: .regular, scale: 1)
     }
     // 「深色模式」行在跟随系统时 = 当前外观档：系统深浅切换要重算行值。
-    styleRegistration = registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
-      (controller: TiebaThemeSettingsViewController, _) in
+    styleRegistration = tiebaObserveTraits(self, [.userInterfaceStyle]) {
+      (controller: TiebaThemeSettingsViewController) in
       controller.refreshDisplayedValues()
     }
   }

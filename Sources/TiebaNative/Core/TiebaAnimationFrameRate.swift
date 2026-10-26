@@ -41,7 +41,7 @@ public nonisolated enum TiebaAnimationFrameRate {
   ///（本仓既有写法，见 TiebaPhotoBrowser）。拿不到视图可问的调用方走下面的
   /// 纯值入口——那条没有线程约束。
   nonisolated public static func maximumFramesPerSecond(of view: UIView) -> Int {
-    MainActor.assumeIsolated { view.window?.screen.maximumFramesPerSecond ?? 0 }
+    MainActor.tiebaAssumeIsolated { view.window?.screen.maximumFramesPerSecond ?? 0 }
   }
 
   /// 从动画宿主 layer 向上找 UIView，再问它所在屏幕的上限。CAAnimationUtils 里

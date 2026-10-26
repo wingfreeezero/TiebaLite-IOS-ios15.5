@@ -463,12 +463,12 @@ final class TiebaFormActionCell: TiebaFormBaseCell {
     switch row.buttonStyle {
     case "bordered":
       // iOS 26 玻璃；17 退回经典 gray（形状/尺寸/其余属性逐项不变）。
-      config = if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      config = .gray()
     case "plain":
       config = .plain()
     default:
       // borderedProminent / glass 都落系统玻璃主按钮；17 退回经典 filled。
-      config = if #available(iOS 26.0, *) { .prominentGlass() } else { .filled() }
+      config = .filled()
     }
     config.title = row.title
     config.image = TiebaFormSymbol.image(row.icon, pointSize: 17, weight: .regular)
@@ -744,13 +744,13 @@ final class TiebaFormDateCell: TiebaFormBaseCell {
 
 // MARK: - 空态行（empty）
 
-/// 区块内空态：系统的 UIContentUnavailableView（排版/字号/次级色全由系统给，
+/// 区块内空态：系统的 TiebaUnavailableView（排版/字号/次级色全由系统给，
 /// 与迁移前 SwiftUI 的 ContentUnavailableView 同源）。视图 init 建好，apply 只换配置。
 final class TiebaFormEmptyCell: TiebaFormBaseCell {
   static let reuseID = "TiebaFormEmptyCell"
 
   private let content = UIView()
-  private let emptyView = UIContentUnavailableView(configuration: .empty())
+  private let emptyView = TiebaUnavailableView(configuration: .empty())
 
   override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
     super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -772,7 +772,7 @@ final class TiebaFormEmptyCell: TiebaFormBaseCell {
   }
 
   func apply(_ row: TiebaFormRow, context: TiebaFormCellContext) {
-    var config = UIContentUnavailableConfiguration.empty()
+    var config = TiebaUnavailableConfiguration.empty()
     config.image = TiebaFormSymbol.image(row.icon ?? "tray", pointSize: 26, weight: .regular)
     config.text = row.title
     config.secondaryText = row.subtitle

@@ -66,7 +66,7 @@ final class TiebaExploreFeedViewController: UIViewController, TiebaTabReselectab
     // 本页实例常驻（explore 三个子页）：设置页改了值不会重走 viewDidLoad，
     // 订阅偏好广播即时生效（token 随 deinit 释放）。
     prefToken = TiebaPreferenceChange.observe(key: "entranceAnimation") { [weak self] in
-      MainActor.assumeIsolated { self?.applyEntrancePreference() }
+      MainActor.tiebaAssumeIsolated { self?.applyEntrancePreference() }
     }
     // 底栏重复点击走 tabReselected（用户口径：先回顶不刷新，顶部再按才刷新）。
     stateView.isHidden = true
@@ -944,7 +944,7 @@ final class TiebaDislikeSheetViewController: UIViewController {
     table.register(UITableViewCell.self, forCellReuseIdentifier: "reason")
     // 降级：.prominentGlass() 是 iOS 26 起；17 退回经典 filled（标题/图标/胶囊逐值不变）。
     var config: UIButton.Configuration =
-      if #available(iOS 26.0, *) { .prominentGlass() } else { .filled() }
+      .filled()
     config.title = "提交"
     config.image = UIImage(systemName: "hand.thumbsdown.fill")
     config.imagePadding = 8

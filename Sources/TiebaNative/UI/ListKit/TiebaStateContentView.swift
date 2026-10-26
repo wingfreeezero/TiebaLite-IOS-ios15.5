@@ -4,7 +4,7 @@
 // 状态块（空态/加载/失败）的 UIKit 实现，原生页面直接使用。
 //
 // 替 @expo/ui 的三个系统状态组件（登录页 / 消息页 空态与加载态）：
-//   ContentUnavailableView  → UIContentUnavailableConfiguration（系统空态排版：
+//   ContentUnavailableView  → TiebaUnavailableConfiguration（系统空态排版：
 //                             图标尺寸、标题/说明字号、行距、次级色全部由系统给）
 //   ProgressView()          → UIActivityIndicatorView（系统转圈）
 //                             [回滚记录 2026-10-05] 一度换成本仓自绘的 TiebaActivityIndicator，
@@ -19,7 +19,7 @@
 //
 // 布局（与迁移前的 VStack 结构逐条对应）：
 //   [转圈]  ← spacing 12（loading 态的 ProgressView + Text 间距）
-//   [状态块：图标 / 标题 / 说明]  ← UIContentUnavailableView
+//   [状态块：图标 / 标题 / 说明]  ← TiebaUnavailableView
 //   [按钮列] ← spacing 16（错误页 ContentUnavailableView 与按钮的 VStack 间距）
 // 按钮 fullWidth（原 `frame({ maxWidth: 9999 })`）时铺满容器宽度；否则按内容宽度
 // 居中（消息页未登录空态的原形态）。
@@ -137,7 +137,7 @@ final class TiebaStateContentView: UIView {
   private let buttonsStack = UIStackView()
   private var buttonsWidthConstraint: NSLayoutConstraint?
   private var buttonViews: [String: UIButton] = [:]
-  private let stateView = UIContentUnavailableView(configuration: .empty())
+  private let stateView = TiebaUnavailableView(configuration: .empty())
   private let skeletonView = TiebaSkeletonList()
 
   override init(frame: CGRect) {
@@ -199,7 +199,7 @@ final class TiebaStateContentView: UIView {
 
   private func rebuild() {
     // 配置对象（SDK 的 Swift 接口按值语义导入）：改完属性再交给状态视图。
-    var config = UIContentUnavailableConfiguration.empty()
+    var config = TiebaUnavailableConfiguration.empty()
     if let imageName, !imageName.isEmpty {
       config.image = UIImage(
         systemName: imageName,
@@ -324,14 +324,14 @@ final class TiebaStateContentView: UIView {
     switch item.style {
     case "bordered":
       // iOS 26 玻璃；17 退回经典 gray（不重建玻璃观感）。
-      config = if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      config = .gray()
     case "glassProminent":
-      config = if #available(iOS 26.0, *) { .prominentGlass() } else { .filled() }
+      config = .filled()
     case "plain":
       config = .plain()
     default:
       // iOS 26 玻璃主按钮；17 退回经典 filled。
-      config = if #available(iOS 26.0, *) { .prominentGlass() } else { .filled() }
+      config = .filled()
     }
     config.title = item.title
     config.image = item.icon.flatMap {

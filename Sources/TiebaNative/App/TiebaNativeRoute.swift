@@ -43,7 +43,7 @@ public extension TiebaNativeScreen {
 /// 返回非可选：**没有**「路由名对不上就换别的页面」的兜底分支。
 ///
 /// @MainActor：VC 构造必须在主线程；调用点在 TiebaNavigator.makeHost 的
-/// MainActor.assumeIsolated 块内（导航壳的全部入口本来就在主线程，见其注释）。
+/// MainActor.tiebaAssumeIsolated 块内（导航壳的全部入口本来就在主线程，见其注释）。
 @MainActor
 public enum TiebaNativeRouteTable {
   public static func make(_ route: TiebaRoute) -> UIViewController {

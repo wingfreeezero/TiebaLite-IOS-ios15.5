@@ -10,7 +10,7 @@ final class TiebaForumDetailViewController: UIViewController, TiebaNativeScreen 
 
   private let table = UITableView(frame: .zero, style: .insetGrouped)
   private let refreshControl = UIRefreshControl()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
 
   private enum Row {
     case profile
@@ -144,7 +144,7 @@ final class TiebaForumDetailViewController: UIViewController, TiebaNativeScreen 
   // MARK: - 状态
 
   private func showLoading() {
-    stateView.configuration = UIContentUnavailableConfiguration.loading()
+    stateView.configuration = TiebaUnavailableConfiguration.loading()
     stateView.isHidden = false
     table.isHidden = true
   }

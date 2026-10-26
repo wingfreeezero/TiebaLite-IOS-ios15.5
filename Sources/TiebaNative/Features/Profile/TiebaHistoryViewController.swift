@@ -13,7 +13,7 @@ final class TiebaHistoryViewController: UIViewController, TiebaNativeScreen {
   private let topBar = UIView()
   private let segmented = UISegmentedControl(items: ["贴子记录", "经过贴吧"])
   private let clearButton = UIButton(type: .system)
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   /// 首屏浏览记录骨架（原 history.tsx SkeletonList variant="thread" count={6}）
   private let skeletonView = TiebaSkeletonList(variant: .thread, count: 6)
 
@@ -113,7 +113,7 @@ final class TiebaHistoryViewController: UIViewController, TiebaNativeScreen {
     // UI/ListKit/TiebaKindListParts.swift 的「重试」；圆角档 .capsule 与前景色沿用原值。
     // 降级：.glass() 是 iOS 26 起；17 退回经典 gray（标题/图标/胶囊/字号逐值不变）。
     var config: UIButton.Configuration =
-      if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      .gray()
     config.title = "清除全部"
     config.image = UIImage(
       systemName: "trash",
@@ -130,7 +130,7 @@ final class TiebaHistoryViewController: UIViewController, TiebaNativeScreen {
     clearButton.setContentCompressionResistancePriority(.required, for: .horizontal)
 
     // 顶栏高度必须**确定**：本页顶部栏与列表共享竖向空间（list.bottom 钉死 view 底），
-    // 而 list 的高度偏好来自与它四边同框的 stateView（UIContentUnavailableView 自带
+    // 而 list 的高度偏好来自与它四边同框的 stateView（TiebaUnavailableView 自带
     // 内在高度，实测 87pt）与 skeletonView。顶栏此前只有 row 的内在高度（hugging 250）
     // ⇒ 求解器选择"满足 stateView 的 750 优先级"：list 被挤成 87pt，顶栏吃掉其余
     // 672pt（row 的 .center 把 picker 居中到屏幕正中，列表只剩底部一条 = 用户报的错位）。

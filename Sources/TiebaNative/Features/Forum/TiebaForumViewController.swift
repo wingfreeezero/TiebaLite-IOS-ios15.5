@@ -7,7 +7,7 @@
 import UIKit
 
 final class TiebaForumViewController: UIViewController, TiebaNativeScreen {
-  private var contentSizeRegistration: UITraitChangeRegistration?
+  private var contentSizeRegistration: TiebaTraitRegistration?
   var screenTitle: String? { nil }
   var screenRightBarItems: [UIBarButtonItem]? { barItems() }
 
@@ -83,9 +83,9 @@ final class TiebaForumViewController: UIViewController, TiebaNativeScreen {
     super.viewDidLoad()
     view.backgroundColor = TiebaListAppearance.pageBackground
     applyPalette()
-    contentSizeRegistration = registerForTraitChanges([
-      UITraitPreferredContentSizeCategory.self,
-    ]) { (controller: TiebaForumViewController, _: UITraitCollection) in
+    contentSizeRegistration = tiebaObserveTraits(self, [
+      .preferredContentSizeCategory,
+    ]) { (controller: TiebaForumViewController) in
       controller.applyPalette()
       // headerSpec 里含字号/行高测量，必须随 trait 重建；否则字号放大后
       // 列表头仍用旧高度，会压到导航栏/关注按钮上。
@@ -1147,7 +1147,7 @@ final class TiebaForumViewController: UIViewController, TiebaNativeScreen {
 
   private func applyFabConfiguration() {
     // 原 GlassView（clear 玻璃）的 UIKit 对位：系统玻璃圆钮（iOS 26）；17 退回经典 gray。
-    var config: UIButton.Configuration = if #available(iOS 26.0, *) { .glass() } else { .gray() }
+    var config: UIButton.Configuration = .gray()
     config.cornerStyle = .capsule
     config.image = UIImage(
       systemName: fabFunction == "back_to_top" ? "arrow.up" : "arrow.clockwise",

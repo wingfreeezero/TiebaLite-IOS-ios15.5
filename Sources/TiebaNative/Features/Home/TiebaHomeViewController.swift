@@ -30,7 +30,7 @@ final class TiebaHomeViewController: UIViewController, TiebaTabReselectable {
   private let sortButton = UIButton(type: .system)
   /// C3（报告 37）：顶栏三块玻璃的 iPad 指针高亮 —— 实例必须强引用（UIPointerInteraction.delegate 是 weak）。
   private var topBarPointers: [TiebaPointerInteraction] = []
-  private var topBarTraitRegistration: UITraitChangeRegistration?
+  private var topBarTraitRegistration: TiebaTraitRegistration?
   // 最近访问
   private let historyHeader = UIView()
   private let historyTitle = UILabel()
@@ -186,11 +186,11 @@ final class TiebaHomeViewController: UIViewController, TiebaTabReselectable {
       pill.widthAnchor.constraint(lessThanOrEqualToConstant: TiebaLayout.floatingMaxWidth),
     ])
     applyLoginState()
-    topBarTraitRegistration = registerForTraitChanges([
-      UITraitPreferredContentSizeCategory.self,
-      UITraitAccessibilityContrast.self,
+    topBarTraitRegistration = tiebaObserveTraits(self, [
+      .preferredContentSizeCategory,
+      .accessibilityContrast,
     ]) {
-      (controller: TiebaHomeViewController, _: UITraitCollection) in
+      (controller: TiebaHomeViewController) in
       controller.updateTopBarTypography()
       controller.updateHistoryMetricsForContentSize()
       controller.updateLayoutMetrics()
@@ -264,7 +264,7 @@ final class TiebaHomeViewController: UIViewController, TiebaTabReselectable {
 
     // 搜索入口：玻璃胶囊按钮，放大镜 + 占位文字左对齐铺满剩余宽度。
     // iOS 26 玻璃；17 退回经典 gray（其余属性逐项不变）。
-    var search: UIButton.Configuration = if #available(iOS 26.0, *) { .glass() } else { .gray() }
+    var search: UIButton.Configuration = .gray()
     search.image = UIImage(
       systemName: "magnifyingglass",
       withConfiguration: UIImage.SymbolConfiguration(pointSize: 14, weight: .medium)
@@ -294,7 +294,7 @@ final class TiebaHomeViewController: UIViewController, TiebaTabReselectable {
 
     for button in [signButton, sortButton] {
       // 原 JS = clear 玻璃圆钮：iOS 26 玻璃；17 退回经典 gray（圆钮/尺寸不变）。
-      var config: UIButton.Configuration = if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      var config: UIButton.Configuration = .gray()
       config.cornerStyle = .capsule
       config.background.backgroundColor = Self.glassSurfaceTint
       button.configuration = config
@@ -417,7 +417,7 @@ final class TiebaHomeViewController: UIViewController, TiebaTabReselectable {
   private func updateTopBarTypography() {
     let accessibility = traitCollection.preferredContentSizeCategory.isAccessibilityCategory
     let fallbackConfiguration: UIButton.Configuration =
-      if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      .gray()
     var search = searchButton.configuration ?? fallbackConfiguration
     search.title = accessibility ? "搜索" : "搜吧、搜贴、搜人"
     search.image = accessibility

@@ -18,7 +18,7 @@ final class TiebaPhotoBrowserActionController {
   /// TiebaNavBarChrome 184 同源问题）。assumeIsolated 成立的依据：本控制器只随
   /// 会话构造，而会话只在主线程建（TiebaPhotoBrowser.present 内部对自己切主，
   /// 见文件头"展示入口全部可从任意线程调用"）——真被后台构造会立刻 trap。
-  private let pill = MainActor.assumeIsolated { TiebaPhotoBrowserPillView() }
+  private let pill = MainActor.tiebaAssumeIsolated { TiebaPhotoBrowserPillView() }
   private var pillBottomConstraint: NSLayoutConstraint?
   private var isSaving = false
   private var isSharing = false

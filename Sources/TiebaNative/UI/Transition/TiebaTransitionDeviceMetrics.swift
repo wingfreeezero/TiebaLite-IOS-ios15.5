@@ -272,11 +272,8 @@ public enum TiebaDeviceMetrics: CaseIterable, Equatable, Sendable {
     public func onScreenNavigationHeight(inLandscape: Bool, systemOnScreenNavigationHeight: CGFloat?) -> CGFloat? {
         switch self {
         case .iPhoneX, .iPhoneXSMax, .iPhoneXr, .iPhone12Mini, .iPhone12, .iPhone12ProMax, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone13ProMax, .iPhone14Pro, .iPhone14ProMax, .iPhone16Pro, .iPhone16ProMax, .iPhoneAir:
-            if #available(iOS 26.0, *) {
-                return 20.0
-            } else {
-                return inLandscape ? 21.0 : 34.0
-            }
+            // iOS 26 把系统底栏高度压到 20pt；本分支底线 15.5，恒走经典高度。
+            return inLandscape ? 21.0 : 34.0
         case .iPhone14ProZoomed:
             return inLandscape ? 21.0 : 28.0
         case .iPhone14ProMaxZoomed:
@@ -331,13 +328,8 @@ public enum TiebaDeviceMetrics: CaseIterable, Equatable, Sendable {
     }
     
     public func keyboardHeight(inLandscape: Bool) -> CGFloat {
-        var keyboardHeight = _keyboardHeight(inLandscape: inLandscape)
-        if #available(iOS 26.0, *) {
-            if !inLandscape {
-                keyboardHeight -= 1.0
-            }
-        }
-        return keyboardHeight
+        // iOS 26 的键盘高度修正（竖屏 -1pt）随版本一起删除：15.5 上就是经典高度。
+        return _keyboardHeight(inLandscape: inLandscape)
     }
     
     private func _keyboardHeight(inLandscape: Bool) -> CGFloat {

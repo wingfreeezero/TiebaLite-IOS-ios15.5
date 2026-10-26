@@ -136,7 +136,7 @@ public final class TiebaFeedRowView: UIView, UIScrollViewDelegate {
   /// 只有换行（换帖/换宽度）才清空——同行重配要保持已加载的那几张不回退。
   var stripLoadedIndexes: Set<Int> = []
   /// 外观档变化登记（registerForTraitChanges，iOS 17 起；traitCollectionDidChange 已废弃）。
-  private var styleRegistration: UITraitChangeRegistration?
+  private var styleRegistration: TiebaTraitRegistration?
   /// 已配置的 (pageKey#index)：主题重刷走 configure 但不能重置图片带滚动位置。
   var configuredIdentity: String?
   /// 上次绘制的点赞数/帖子 id：同一帖计数变化时播跳动（RN numPop 的判据）。
@@ -340,10 +340,10 @@ public final class TiebaFeedRowView: UIView, UIScrollViewDelegate {
 
     // 动态色转 CGColor 后不随外观走：系统级 trait 登记只在外观档真变时回调，
     // 不再每次 layoutSubviews 比对（traitCollectionDidChange 自 iOS 17 废弃）。
-    styleRegistration = registerForTraitChanges([
-      UITraitUserInterfaceStyle.self,
-      UITraitAccessibilityContrast.self,
-    ]) { (view: TiebaFeedRowView, _) in
+    styleRegistration = tiebaObserveTraits(self, [
+      .userInterfaceStyle,
+      .accessibilityContrast,
+    ]) { (view: TiebaFeedRowView) in
       view.refreshDynamicLayerColors()
       view.updateAccessibilityElements()
     }

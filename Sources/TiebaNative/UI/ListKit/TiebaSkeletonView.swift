@@ -251,7 +251,7 @@ final class TiebaSkeletonCellView: UIView {
   private var mediaBlock: UIView?
   private var mediaHeightConstraint: NSLayoutConstraint?
   /// 外观档变化登记（registerForTraitChanges；traitCollectionDidChange 已废弃）。
-  private var styleRegistration: UITraitChangeRegistration?
+  private var styleRegistration: TiebaTraitRegistration?
 
   /// 扫光高光色：浅色下白带压在 #E5E5EA 骨块上；深色下只给极淡一档。
   private static let shimmerHighlight = UIColor { traits in
@@ -281,8 +281,8 @@ final class TiebaSkeletonCellView: UIView {
     case .row: buildRow()
     }
     // 动态色转 CGColor 后不随外观走：首帧解析 + trait 真变时重解析。
-    styleRegistration = registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
-      (view: TiebaSkeletonCellView, _) in
+    styleRegistration = tiebaObserveTraits(self, [.userInterfaceStyle]) {
+      (view: TiebaSkeletonCellView) in
       view.refreshBorderColors()
       view.refreshShimmerColors()
     }

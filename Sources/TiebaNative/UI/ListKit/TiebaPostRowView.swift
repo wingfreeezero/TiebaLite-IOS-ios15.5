@@ -84,11 +84,9 @@ final class TiebaPostRowView: UIView {
   private var pressedLink: (url: String, displayText: String)?
   /// 链接按压识别器（delegate 判据要用到它：只按在链接上才成立）。
   private var linkPressRecognizer: UILongPressGestureRecognizer?
-  private var selectionMenu: UIMenu?
-  private var selectionMenuInteraction: UIEditMenuInteraction?
   /// 主贴标题的长按菜单（标题是 UILabel，不走正文的 TextNode 选择层，单独挂一套）。
-  private var titleMenu: UIMenu?
-  private var titleMenuInteraction: UIEditMenuInteraction?
+  /// 15.5：菜单由 TiebaEditMenuCompat（系统 action sheet）承载，不再需要 UIEditMenuInteraction
+  /// 的实例与 UIMenu 缓存（那份 UIMenu 只是为了喂给系统的编辑菜单代理）。
   private let blockedTipView = UIView()
   private let blockedTipLabel = UILabel()
   private let blockedTipIcon = UIImageView()
@@ -515,9 +513,6 @@ final class TiebaPostRowView: UIView {
     )
     titlePress.minimumPressDuration = 0.35
     titleLabel.addGestureRecognizer(titlePress)
-    let titleMenuInteraction = UIEditMenuInteraction(delegate: self)
-    titleLabel.addInteraction(titleMenuInteraction)
-    self.titleMenuInteraction = titleMenuInteraction
     addSubview(titleLabel)
     addSubview(avatarControl)
     avatarControl.addTarget(self, action: #selector(handleAvatar), for: .touchUpInside)
@@ -585,8 +580,8 @@ final class TiebaPostRowView: UIView {
       presentMenu: { [weak self] anchor, rect, items in
         self?.presentSelectionMenu(on: anchor, rect: rect, items: items)
       },
-      dismissMenu: { [weak self] in
-        self?.selectionMenuInteraction?.dismissMenu()
+      dismissMenu: {
+        TiebaEditMenuCompat.dismiss()
       },
       performAction: { [weak self] string, action in
         self?.performSelectionAction(string: string, action: action)
@@ -612,11 +607,8 @@ final class TiebaPostRowView: UIView {
     textTap.require(toFail: linkPress)
     selectionNode.addGestureRecognizer(linkPress)
     selectionNode.addGestureRecognizer(textTap)
-    // 编辑菜单（拷贝/全选/查询…）走系统的 UIEditMenuInteraction：装配期就挂到选择层上，
-    // 长按选词时由 presentSelectionMenu 弹出（自绘选择没有系统文本框那套免费菜单，必须自己装这一件）。
-    let editMenuInteraction = UIEditMenuInteraction(delegate: self)
-    selectionNode.addInteraction(editMenuInteraction)
-    selectionMenuInteraction = editMenuInteraction
+    // 编辑菜单（拷贝/全选/查询…）：15.5 上没有 UIEditMenuInteraction（iOS 16 起），
+    // 由 presentSelectionMenu 走 TiebaEditMenuCompat（系统 action sheet）承载同一批动作。
     addSubview(selectionNode)
     textSelectionNode = selectionNode
 
@@ -1253,16 +1245,16 @@ final class TiebaPostRowView: UIView {
     let text = titleLabel.attributedText?.string ?? titleLabel.text ?? ""
     guard text.isEmpty == false else { return }
     TiebaSceneHaptics.fire("long-press")
-    titleMenu = UIMenu(children: [
-      UIAction(title: "复制标题", image: UIImage(systemName: "doc.on.doc")) { [weak self] _ in
-        self?.onEvent?(.copyTitle)
-      }
-    ])
-    titleMenuInteraction?.presentEditMenu(
-      with: UIEditMenuConfiguration(
-        identifier: nil,
-        sourcePoint: recognizer.location(in: titleLabel)
-      )
+    TiebaEditMenuCompat.present(
+      [
+        TiebaEditMenuCompat.Item(
+          title: "复制标题",
+          image: UIImage(systemName: "doc.on.doc")
+        ) { [weak self] in
+          self?.onEvent?(.copyTitle)
+        }
+      ],
+      from: titleLabel
     )
   }
 
@@ -1484,14 +1476,15 @@ extension TiebaPostRowView {
 
   /// 选择菜单：交给系统的 UIEditMenuInteraction 呈现（与系统文本框同一套观感），菜单项由选择层给。
   private func presentSelectionMenu(on anchor: UIView, rect: CGRect, items: [TiebaTextSelectionMenuItem]) {
-    selectionMenu = UIMenu(children: items.map { item in
-      UIAction(title: item.title) { _ in item.action() }
-    })
-    // anchor 就是交互挂在的选择层；交互在装配期已 add（见 buildSubviews），这里只负责弹。
-    // 矩形 rect 也在选择层坐标里（的选择高亮矩形），present 时才 add 有注册时序风险。
-    selectionMenuInteraction?.presentEditMenu(
-      with: UIEditMenuConfiguration(identifier: nil, sourcePoint: CGPoint(x: rect.midX, y: rect.midY))
+    // anchor 就是选择层（面板挂在它上面）；rect 在选择层坐标里，决定 iPad popover 的落点。
+    // 15.5：动作表由 TiebaEditMenuCompat 弹出，矩形只用于锚点对齐。
+    TiebaEditMenuCompat.present(
+      items.map { item in
+        TiebaEditMenuCompat.Item(title: item.title) { item.action() }
+      },
+      from: anchor
     )
+    _ = rect
   }
 
   /// 菜单动作：拷贝走 TiebaClipboard、分享走 TiebaShareSheet、查询走系统词典 —— 全是系统件。
@@ -1551,26 +1544,8 @@ extension TiebaPostRowView: UIGestureRecognizerDelegate {
   }
 }
 
-extension TiebaPostRowView: @MainActor UIEditMenuInteractionDelegate {
-  func editMenuInteraction(
-    _ interaction: UIEditMenuInteraction,
-    menuFor configuration: UIEditMenuConfiguration,
-    suggestedActions: [UIMenuElement]
-  ) -> UIMenu? {
-    // 标题的交互与正文选择层共用本代理，靠 interaction 区分菜单来源。
-    if interaction === titleMenuInteraction { return titleMenu }
-    return selectionMenu ?? UIMenu(children: suggestedActions)
-  }
-
-  func editMenuInteraction(
-    _ interaction: UIEditMenuInteraction,
-    willDismissMenuFor configuration: UIEditMenuConfiguration,
-    animator: any UIEditMenuInteractionAnimating
-  ) {
-    // 菜单收掉就把缓存的那份 UIMenu 放掉：它捕获的是行事件，留着等于替旧行续命。
-    if interaction === titleMenuInteraction { titleMenu = nil }
-  }
-}
+// [底线 15.5] `UIEditMenuInteractionDelegate` 扩展已删除：15.x 没有 UIEditMenuInteraction，
+// 同一批菜单动作改由 TiebaEditMenuCompat（系统 action sheet）呈现，见 presentSelectionMenu。
 //
 // 正文与楼中楼现在都由 TextNode 渲染（textNode / subPostTextNodes），系统 UITextView / UILabel 退场。
 // 四层的接法见 buildSubviews：文本 → 链接按压高亮（TiebaLinkHighlightingNode）→ 无障碍元素层

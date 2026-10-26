@@ -28,7 +28,7 @@
 //      已由保留的 UITapGestureRecognizer 分支（.possible → .failed）覆盖。
 //   3) 删去 `if #available(iOS 9.0, *)`（部署底线 iOS 26，恒可用）。
 //   4) Swift 6 严格并发正统化（未用任何 @preconcurrency / nonisolated(unsafe) /
-//      @unchecked Sendable / MainActor.assumeIsolated，也没有降 swift 版本）：
+//      @unchecked Sendable / MainActor.tiebaAssumeIsolated，也没有降 swift 版本）：
 //      a) UIGestureRecognizer 在 SDK 里已是 @MainActor，子类自动继承隔离域，本类无需显式标注；
 //      b) 两个文件级自由函数显式标 @MainActor —— 它们直接读写 UIView 与
 //         UIGestureRecognizer.state，本来就是主线程代码；

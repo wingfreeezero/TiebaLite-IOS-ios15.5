@@ -440,7 +440,7 @@ enum TiebaDatabaseSchema {
             return
           }
           let jittered = delayMilliseconds * Double.random(in: 0.8...1.2)
-          try await Task.sleep(for: .milliseconds(jittered))
+          try await Task.sleep(nanoseconds: UInt64(max(0, jittered) * 1_000_000))  // 同上：15.5 没有 Duration 版
           delayMilliseconds = min(delayMilliseconds * 2, 8000)
         }
       }

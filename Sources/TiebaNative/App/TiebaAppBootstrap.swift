@@ -24,7 +24,7 @@ public final class TiebaAppBootstrap {
   private weak var window: UIWindow?
   private var started = false
   /// 系统外观变化 → 跟随模式下重刷主题（iOS 17 registerForTraitChanges）。
-  private var traitRegistration: UITraitChangeRegistration?
+  private var traitRegistration: TiebaTraitRegistration?
   /// 自动检测更新：同会话只跑一次（原 JS 的 lastCheckedAt 内存节流同义）。
   private var autoUpdateChecked = false
 
@@ -121,7 +121,7 @@ public final class TiebaAppBootstrap {
     // 回前台先付掉，别让它落在用户点分享那一刻。延迟 1s = 让前台转场先跑完
     // （预热是纯主线程构建，不跟转场抢帧）；预热一次即常驻本进程。
     Task { @MainActor in
-      try? await Task.sleep(for: .seconds(1))
+      try? await Task.sleep(nanoseconds: 1_000_000_000)  // Duration 版（iOS 16 起）→ 纳秒版
       TiebaShareSheet.prewarm()
     }
     TiebaForegroundNotifier.shared.handleDidBecomeActive()
@@ -207,8 +207,8 @@ public final class TiebaAppBootstrap {
     // 导航壳（tint/navTint/底色/状态栏字色 + 逐宿主子页 trait）+ TiebaSystemUI
     // 根视图底色 + 窗口级深浅重申；其余页面/栏没有自己的 override，随窗口 trait
     // 原生一起变（含 presented）。手动模式下窗口有 override，系统切档不触发这里。
-    traitRegistration = window.registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
-      (_: UIWindow, _) in
+    traitRegistration = tiebaObserveTraits(window, [.userInterfaceStyle]) {
+      (_: UIWindow) in
       guard TiebaPreferences.bool("followSystemDarkMode", default: true) else { return }
       TiebaAppBootstrap.shared.applyTheme()
     }

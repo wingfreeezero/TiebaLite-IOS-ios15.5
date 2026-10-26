@@ -38,7 +38,7 @@ final class TiebaForumMembersViewController: UIViewController {
 
   /// 分段 = TiebaTabSelector（选中/未选中两份文本交叉淡化 + 指示器连续插值，见 UI/Components）。
   private let segmented = TiebaTabSelector(items: ["成员", "等级排行"])
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   /// 首屏骨架：成员段 = card count 6、排行段 = row count 8（原 members.tsx 同判据）
   private let skeletonView = TiebaSkeletonList(variant: .card, count: 6)
   private let refreshControl = UIRefreshControl()
@@ -92,7 +92,7 @@ final class TiebaForumMembersViewController: UIViewController {
     stateView.translatesAutoresizingMaskIntoConstraints = false
     skeletonView.isHidden = true
     // [修复] 分段栏的竖向尺寸必须是「硬要求」：它此前只靠内在高度（hugging/压缩阻力都是软优先级），
-    // 而 stateView（UIContentUnavailableView 自带 ~87pt 内在高度、优先 750）与 collectionView 四边同框，
+    // 而 stateView（TiebaUnavailableView 自带 ~87pt 内在高度、优先 750）与 collectionView 四边同框，
     // 求解器可能把高度让给分段栏、把列表压到只剩内在高度（与「浏览记录」页同一类挤压，那页实测 picker 被顶到屏幕正中）。
     // 钉死竖向 hugging/压缩阻力后，分段栏 = 内在高度、列表拿走其余全部，挤压在约束层面不可能发生。
     segmented.setContentHuggingPriority(.required, for: .vertical)
@@ -301,7 +301,7 @@ final class TiebaForumMembersViewController: UIViewController {
   private func showState(_ kind: StateKind) {
     switch kind {
     case .loading:
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
       stateView.isHidden = false
     case .emptyMembers:
       stateView.showEmpty(

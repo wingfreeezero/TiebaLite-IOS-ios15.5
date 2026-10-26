@@ -40,6 +40,22 @@ final class TiebaSelectableLabel: UITextView {
 }
 
 extension TiebaSelectableLabel: UITextViewDelegate {
+  /// 掩盖地址检查的共用入口：nil = 放行（交给系统默认动作），非 nil = 需要用户确认的真实地址。
+  /// 三个入口（16+ 的编辑菜单、17+ 的主动作、15/16 的 shouldInteractWith）共用同一份判定。
+  private func tiebaConcealedLink(_ url: URL, range: NSRange, in textView: UITextView) -> String? {
+    let fullText = textView.attributedText?.string ?? ""
+    let length = (fullText as NSString).length
+    guard range.location != NSNotFound, NSMaxRange(range) <= length else { return nil }
+    let displayText = (fullText as NSString).substring(with: range)
+    return TiebaTextLinkSafety.concealedAddress(
+      url: url.absoluteString,
+      displayText: displayText,
+      fullText: fullText
+    )
+  }
+
+  /// 编辑菜单定制是 iOS 16 起（15.5 上用系统默认菜单）。
+  @available(iOS 16.0, *)
   func textView(
     _ textView: UITextView,
     editMenuForTextIn range: NSRange,
@@ -50,27 +66,39 @@ extension TiebaSelectableLabel: UITextViewDelegate {
 
   /// [接线] 本类是自带 delegate 的只读文本框（见 init），链接点击同样要过伪装链接判定：
   /// 显示文字与真实地址不一致时先弹确认框，一致才交给系统默认动作。
+  /// 主动作定制是 iOS 17 起（UITextItem 是 17 的类型）。
+  @available(iOS 17.0, *)
   func textView(
     _ textView: UITextView,
     primaryActionFor textItem: UITextItem,
     defaultAction: UIAction
   ) -> UIAction? {
     guard case .link(let url) = textItem.content else { return defaultAction }
-    let fullText = textView.attributedText?.string ?? ""
-    let range = textItem.range
-    let length = (fullText as NSString).length
-    guard range.location != NSNotFound, NSMaxRange(range) <= length else { return defaultAction }
-    let displayText = (fullText as NSString).substring(with: range)
-    guard let concealed = TiebaTextLinkSafety.concealedAddress(
-      url: url.absoluteString,
-      displayText: displayText,
-      fullText: fullText
-    ) else { return defaultAction }
+    guard let concealed = tiebaConcealedLink(url, range: textItem.range, in: textView) else {
+      return defaultAction
+    }
     return UIAction(title: defaultAction.title) { _ in
       TiebaTextLinkSafety.confirm(address: concealed, presenter: TiebaTopViewController.find()) {
         UIApplication.shared.open(url)
       }
     }
+  }
+
+  /// 15.x / 16.x 的链接点击钩子：iOS 17 起由上面的 primaryActionFor 取代，低版本上它仍然是
+  /// 唯一入口。返回 false = 我们自己接管（先弹疑似伪装确认），true = 交给系统默认动作。
+  func textView(
+    _ textView: UITextView,
+    shouldInteractWith URL: URL,
+    in characterRange: NSRange,
+    interaction: UITextItemInteraction
+  ) -> Bool {
+    guard let concealed = tiebaConcealedLink(URL, range: characterRange, in: textView) else {
+      return true
+    }
+    TiebaTextLinkSafety.confirm(address: concealed, presenter: TiebaTopViewController.find()) {
+      UIApplication.shared.open(URL)
+    }
+    return false
   }
 }
 

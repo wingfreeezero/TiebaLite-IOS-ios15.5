@@ -9,7 +9,7 @@ final class TiebaThreadStoreViewController: UIViewController, TiebaNativeScreen 
   var screenTitle: String? { "我的收藏" }
 
   private let list = TiebaKindListContentView()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
   /// 首屏收藏骨架（原 threadstore.tsx SkeletonList variant="thread" count={6}）
   private let skeletonView = TiebaSkeletonList(variant: .thread, count: 6)
   private let pill = TiebaPhotoBrowserPillView()
@@ -238,7 +238,7 @@ final class TiebaThreadStoreViewController: UIViewController, TiebaNativeScreen 
       // 首次加载且无收藏：骨架（原 loading && items.length === 0 分支）
       skeletonView.isHidden = false
       stateView.isHidden = true
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
     case .error(let message):
       skeletonView.isHidden = true
       stateView.showError(message) { [weak self] in self?.reload() }

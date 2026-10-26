@@ -434,7 +434,7 @@ final class TiebaKindFooterView: UICollectionReusableView {
   private static func retryConfiguration(palette: TiebaSimpleRowPalette) -> UIButton.Configuration {
     // 降级：.glass() 是 iOS 26 起；17 退回经典 gray（胶囊/字号/色/内边距逐值不变）。
     var config: UIButton.Configuration =
-      if #available(iOS 26.0, *) { .glass() } else { .gray() }
+      .gray()
     config.cornerStyle = .capsule
     config.baseForegroundColor = palette.base.primary
     config.titleTextAttributesTransformer = UIConfigurationTextAttributesTransformer { incoming in

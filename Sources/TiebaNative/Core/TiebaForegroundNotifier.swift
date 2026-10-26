@@ -28,7 +28,7 @@ final class TiebaForegroundNotifier {
     sessionObserver = NotificationCenter.default.addObserver(
       forName: TiebaSession.didChangeNotification, object: nil, queue: .main
     ) { [weak self] _ in
-      MainActor.assumeIsolated { self?.syncBackgroundRegistration() }
+      MainActor.tiebaAssumeIsolated { self?.syncBackgroundRegistration() }
     }
     if UIApplication.shared.applicationState == .active {
       poll()

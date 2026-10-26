@@ -42,19 +42,13 @@ final class TiebaGlassContainerView: UIView {
     }
 
     init(spacing: CGFloat = 7.0) {
-        // 降级：UIGlassContainerEffect（玻璃分组上下文）是 iOS 26 起。17/18 上没有
-        // 分组概念，而本容器按设计本来就**自身无材质**（见类型注释：只提供分组上下文），
-        // 故用 effect = nil 的 UIVisualEffectView 顶上——contentView 承载子视图、
-        // hitTest 穿透、明暗 override 三条语义逐条不变。
-        let effect: UIVisualEffect?
-        if #available(iOS 26.0, *) {
-            let glass = UIGlassContainerEffect()
-            glass.spacing = spacing
-            effect = glass
-        } else {
-            effect = nil
-        }
-        self.effectView = UIVisualEffectView(effect: effect)
+        // 液态玻璃（UIGlassContainerEffect，iOS 26 起）在本分支整体删除：15.5 上不存在玻璃分组，
+        // 而本容器按设计本来就**自身无材质**（只提供分组上下文，见类型注释），因此直接用
+        // effect = nil 的 UIVisualEffectView —— contentView 承载子视图、hitTest 穿透、
+        // 明暗 override 三条语义逐条不变。`spacing` 只影响"玻璃间融合距离"，没有玻璃时无意义，
+        // 形参保留（调用点与上游一致）但不参与任何渲染。
+        _ = spacing
+        self.effectView = UIVisualEffectView(effect: nil)
         super.init(frame: .zero)
         self.backgroundColor = .clear
         self.addSubview(self.effectView)
@@ -118,22 +112,17 @@ final class TiebaGlassContainerView: UIView {
 /// 现在统一从这里出，观感规则（.regular + 可选 tint）只此一份。
 extension TiebaGlassContainerView {
   static func makeEffect(tint: UIColor? = nil, clear: Bool = false) -> UIVisualEffectView {
-    // 降级：UIGlassEffect 是 iOS 26 起。17/18 上用经典超薄材质模糊顶上（最接近的
-    // 旧观感，同 TiebaUpdateDialogViewController/TiebaSignService 的 17 配方）；
-    // 旧系统的 effect 没有 tintColor 入口，tint 改落在 contentView 底色上——
+    // iOS 26 的 UIGlassEffect（.regular/.clear + tintColor + 白色高光边）在本分支整体删除：
+    // 15.5 上没有这个材质，统一用经典超薄/超薄薄材质模糊顶上——这正是原代码里
+    // "17/18 上"已经写好的降级配方（最接近的旧观感）。tint 落在 contentView 底色上，
     // 调用点拿到的仍是"带色的一层材质"，子视图挂载点（contentView）也不变。
-    if #available(iOS 26.0, *) {
-      let effect = UIGlassEffect(style: clear ? .clear : .regular)
-      if let tint { effect.tintColor = tint }
-      let view = UIVisualEffectView(effect: effect)
-      // 极细的白色反光边：不是内容分隔线，而是玻璃与背景之间的一层高光。
-      // 深色/浅色都用低透明度白色，避免把玻璃重新画成实心卡片。
-      view.layer.borderWidth = 0.5
-      view.layer.borderColor = UIColor.white.withAlphaComponent(0.24).cgColor
-      return view
-    }
-    let view = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterial))
+    // `clear` 只用于"更透的玻璃"，对应更薄的材质档。
+    let style: UIBlurEffect.Style = clear ? .systemThinMaterial : .systemUltraThinMaterial
+    let view = UIVisualEffectView(effect: UIBlurEffect(style: style))
     if let tint { view.contentView.backgroundColor = tint }
+    // 极细的白色反光边：不是内容分隔线，而是材质与背景之间的一层高光（15.5 上保留同一观感）。
+    view.layer.borderWidth = 0.5
+    view.layer.borderColor = UIColor.white.withAlphaComponent(0.24).cgColor
     return view
   }
 }

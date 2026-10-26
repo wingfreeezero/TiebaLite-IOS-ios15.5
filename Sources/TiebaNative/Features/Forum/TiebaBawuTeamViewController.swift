@@ -7,7 +7,7 @@ final class TiebaBawuTeamViewController: UIViewController {
   private let forumId: String
 
   private let list = TiebaKindListContentView()
-  private let stateView = UIContentUnavailableView(configuration: .loading())
+  private let stateView = TiebaUnavailableView(configuration: .loading())
 
   private var team: TiebaBawuTeam?
   private var rowItems: [TiebaBawuTeam.Member?] = []
@@ -281,7 +281,7 @@ final class TiebaBawuTeamViewController: UIViewController {
         self?.list.isHidden = false
       }
     case .loading:
-      stateView.configuration = UIContentUnavailableConfiguration.loading()
+      stateView.configuration = TiebaUnavailableConfiguration.loading()
       stateView.isHidden = false
       list.isHidden = true
     case .empty:

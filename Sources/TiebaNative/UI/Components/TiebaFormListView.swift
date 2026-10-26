@@ -64,7 +64,7 @@
 //                   oksign 的签到统计与逐吧进度行
 //   spinner         居中 UIActivityIndicatorView（加载行）
 //   datePicker      DatePicker(hourAndMinute)：UIDatePicker(.compact, .time)
-//   empty           区块内空态：UIContentUnavailableView（系统空态排版）
+//   empty           区块内空态：TiebaUnavailableView（系统空态排版）
 //
 // 新增事件：onTextChange { id, value }（textField 每次编辑；其余事件语义不变）。
 // 颜色键（color / iconTint / trailingColor）除 #RRGGBB 外还接受系统语义 token：
@@ -365,14 +365,14 @@ final class TiebaFormListView: UIView {
   /// 主色（nil = 系统默认，见 tintHex）
   private var accent: UIColor?
   /// trait 登记令牌（registerForTraitChanges 的返回值需持有）。
-  private var styleRegistration: UITraitChangeRegistration?
+  private var styleRegistration: TiebaTraitRegistration?
 
   override init(frame: CGRect) {
     super.init(frame: frame)
     // 行首色块图标把当时的动态色烘进位图并缓存：系统切深浅时 UITableView 只下发 trait、
     // 不重新 cellForRow，位图不重烘就会出现「标题/底色换了、色块停旧档」。
-    styleRegistration = registerForTraitChanges([UITraitUserInterfaceStyle.self]) {
-      (view: TiebaFormListView, _) in
+    styleRegistration = tiebaObserveTraits(self, [.userInterfaceStyle]) {
+      (view: TiebaFormListView) in
       view.invalidateIconCache()
     }
     setUp()

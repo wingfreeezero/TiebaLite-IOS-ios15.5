@@ -10,7 +10,7 @@ import UIKit
 //
 // ⚠️ 仍未处理的既有并发标注（改了会连带改 40+ 个调用方文件）：
 // 本类仍是 NSObject + @unchecked Sendable，pushRoute/navigate 等非隔离入口里还剩几处
-// MainActor.assumeIsolated。正确解法是整类 @MainActor，但那会让 Core/Features 里 40+ 个
+// MainActor.tiebaAssumeIsolated。正确解法是整类 @MainActor，但那会让 Core/Features 里 40+ 个
 // 文件（网络回调、深链入口）的调用点一起需要 hop，留给 Lead 决策
 //（见 docs/uikit-migration/22-接线-viewport.md 的「没做到」一节）。
 
@@ -116,7 +116,7 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
     tab.onReselect = { [weak self] idx in
       // 原生 tab 根屏直接受理（JS 侧 TAB_RESELECT 订阅在页面原生化后消失）。
       // onReselect 是 @MainActor 闭包（TiebaNavigationShell.swift），这里本就是主 actor 上下文，
-      // 所以直接访问 @MainActor 的宿主/页面即可 —— 原来的 MainActor.assumeIsolated 是多余的绕过标注。
+      // 所以直接访问 @MainActor 的宿主/页面即可 —— 原来的 MainActor.tiebaAssumeIsolated 是多余的绕过标注。
       guard let self else { return }
       if let host = self.tabRootHosts[idx],
         let screen = host.children.first as? TiebaTabReselectable
@@ -171,12 +171,9 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
           image: UIImage(systemName: spec.normal),
           identifier: TiebaRouteTable.tabNames[idx]
         ) { _ in nav }
-        // 选中态实心变体是原 UITabBarItem 时代的既有观感，不能丢；但 `selectedImage`
-        // 的**声明**要 26.6+ 的 SDK 才有（CI 是 SDK 26.5，直接写编译不过），运行时
-        // 26.1+ 已支持 ⇒ 按 KVC 落值，缺这个键就跳过。
-        if #available(iOS 26.1, *), item.responds(to: NSSelectorFromString("setSelectedImage:")) {
-          item.setValue(UIImage(systemName: spec.selected), forKey: "selectedImage")
-        }
+        // iOS 26.1 的 UITab 选中态实心图（KVC 落 selectedImage）随版本分支一起删除：
+        // 本包底线 15.5，走的是下方 setViewControllers 的经典 UITabBarItem 路径
+        // （选中态实心图已由 UITabBarItem(selectedImage:) 给出）。
         // 根 tab 的 automatic placement 解析成 .default（"可增可删"）——侧边栏 Edit
         // 因此允许拖动却落不下来（用户实测"拖完保存顺序不变"）。.movable = 可移不可删，
         // 正好是本 App 要的：四个 tab 是固定功能，只该排序。
@@ -316,7 +313,7 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
       // 无接收方，参数照旧丢弃。与 selectTab 同款：调用点本就在主线程，
       // assumeIsolated 把这条既有契约告诉编译器。
       if let initialTab = route.initialTab, let host = tabRootHosts[tabIdx] {
-        MainActor.assumeIsolated {
+        MainActor.tiebaAssumeIsolated {
           (host.children.first as? TiebaTabRouteParamReceiving)?.receiveInitialTab(initialTab)
         }
       }
@@ -334,7 +331,7 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
   /// 转场结束即关（见 didShow），所以 pop 不会走 Hero。
   private func armHero(for route: TiebaRoute, target: UINavigationController?) {
     guard let nav = target else { return }
-    MainActor.assumeIsolated {
+    MainActor.tiebaAssumeIsolated {
       var fromCard = false
       if case .thread(let id, _, _, let fromFavorites) = route, !fromFavorites {
         fromCard = TiebaThreadSnapshots.peek(id: id) != nil
@@ -390,14 +387,26 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
       }
       presentable.modalPresentationStyle = .pageSheet
       if let sheet = presentable.sheetPresentationController {
-        sheet.detents = detents.map { d in
-          // 0.3 / 0.55 / 0.9 这类比例值 → 自定义 detent；1.0 用 .large。
-          d >= 0.999 ? .large() : .custom(identifier: .init("tieba-\(d)")) { ctx in d * ctx.maximumDetentValue }
+        // 下限 15.5：`.custom(identifier:resolver:)` 与 prefersScrollingExpandsWhenScrolledToEdge
+        // 都是 iOS 16 起的 API，15.x 只有 .medium() / .large() 两档。比例值按"半屏/大档"映射，
+        // 表单仍能在两种高度停靠；圆角、把手、触觉与其余属性逐值不变。
+        if #available(iOS 16.0, *) {
+          sheet.detents = detents.map { d in
+            // 0.3 / 0.55 / 0.9 这类比例值 → 自定义 detent；1.0 用 .large。
+            d >= 0.999 ? .large() : .custom(identifier: .init("tieba-\(d)")) { ctx in d * ctx.maximumDetentValue }
+          }
+          // 表单内的滑动不该把表单拖下去（登录页有可滚动内容）。
+          sheet.prefersScrollingExpandsWhenScrolledToEdge = true
+        } else {
+          let wantsMedium = detents.contains { $0 < 0.7 }
+          let wantsLarge = detents.contains { $0 >= 0.7 }
+          var list: [UISheetPresentationController.Detent] = []
+          if wantsMedium { list.append(.medium()) }
+          if wantsLarge { list.append(.large()) }
+          sheet.detents = list.isEmpty ? [.medium()] : list
         }
         sheet.prefersGrabberVisible = grabber
         sheet.preferredCornerRadius = cornerRadius
-        // 表单内的滑动不该把表单拖下去（登录页有可滚动内容）。
-        sheet.prefersScrollingExpandsWhenScrolledToEdge = true
       }
       // 从"当前这一屏"推表单：手机上二级页正压在根容器栈上（见 activeNav），
       // 从被盖住的 tab 根屏推会被压在二级页下面（管理/排序这类页内表单）。
@@ -450,7 +459,7 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
     if tabBar.traitCollection.userInterfaceIdiom != .pad, let shellNav,
       shellNav.viewControllers.count > 1
     {
-      MainActor.assumeIsolated {
+      MainActor.tiebaAssumeIsolated {
         _ = shellNav.popToRootViewController(animated: false)
         self.pruneHosts()
       }
@@ -494,7 +503,7 @@ public final class TiebaNavigator: NSObject, @unchecked Sendable {
     // 不是 @MainActor（@unchecked Sendable：状态只允许主线程碰，全部入口收在
     // onMain / AppDelegate 主线程）。assumeIsolated 把"makeHost 只在主线程调用"
     // 这条既有契约显式告诉编译器。
-    let host: TiebaRouteHostViewController = MainActor.assumeIsolated {
+    let host: TiebaRouteHostViewController = MainActor.tiebaAssumeIsolated {
       // 类型化路由的每个 case 都有页面（make 非可选）：这里没有"未登记就换页"的兜底。
       let native = TiebaNativeRouteTable.make(route)
       return TiebaRouteHostViewController(route: route, hostId: hostId, nativeChild: native)
@@ -703,7 +712,7 @@ extension TiebaNavigator: UINavigationControllerDelegate {
     // 转场一结束就关 Hero：这样"进入"用魔改，**返回与后续跳转全走系统原生**
     //（Hero 只在 push 那一刻被读，pop 时已关 ⇒ 系统 push/pop 动画）。
     // 这里是 UINavigationControllerDelegate 的回调（协议方法本身就在主 actor），
-    // 直接写即可 —— 原来的 MainActor.assumeIsolated 是多余的。
+    // 直接写即可 —— 原来的 MainActor.tiebaAssumeIsolated 是多余的。
     if navigationController.hero.isEnabled { navigationController.hero.isEnabled = false }
   }
 
